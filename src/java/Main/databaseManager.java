@@ -1,4 +1,8 @@
-
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
 package Main;
 
 import java.sql.Connection;
@@ -22,18 +26,24 @@ public class databaseManager {
     static private databaseManager DBM = null;
 
     private databaseManager() throws SQLException {
-        myCon = DriverManager.getConnection("jdbc:mysql://localhost:3306/search_engine?autoReconnect=true&useSSL=false", userDatabase, passDatabase);
+        myCon = DriverManager.getConnection("jdbc:mysql://localhost:3306/search_engine", userDatabase, passDatabase);
         //Create a statement
         myStatement = myCon.createStatement();
     }
 
     static public databaseManager getInstance() {
+        try {
+            Class.forName("com.mysql.jdbc.Driver");
+        } catch (ClassNotFoundException ex) {
+            Logger.getLogger(databaseManager.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
         if (DBM == null) {
             try {
                 DBM = new databaseManager();
                 return DBM;
             } catch (SQLException ex) {
-                Logger.getLogger(databaseManager.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(databaseManager.class.getName()).log(Level.SEVERE, null, ex);
             }
         } else {
             return DBM;

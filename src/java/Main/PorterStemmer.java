@@ -34,20 +34,21 @@ public class PorterStemmer {
         }
 
         SB = new StringBuilder(S);
-        M = new int[SB.length()];
-        V = new int[SB.length()];
-        calculateMs();
-        calculateVs();
+        if(S.length() > 2){
+            M = new int[SB.length()];
+            V = new int[SB.length()];
+            calculateMs();
+            calculateVs();
 
-        Step1a();
-        Step1b();
-        Step1c();
-        Step2();
-        Setp3();
-        Step4();
-        Step5a();
-        Step5b();
-
+            Step1a();
+            Step1b();
+            Step1c();
+            Step2();
+            Setp3();
+            Step4();
+            Step5a();
+            Step5b();
+        }
         String res = "";
         try {
             res = new String(SB.toString().getBytes(), "UTF-8");
