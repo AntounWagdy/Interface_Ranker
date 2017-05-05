@@ -123,12 +123,15 @@ public class QueryServlet extends HttpServlet {
                     + "<input type=\"submit\" value=\"Search!\" style=\"font-size : 15px; font-weight: bold;\"/>\n"
                     + "</form>");
             
-            for (Map.Entry<String, Double> entry : res.entrySet()) {
-                out.println("<h3 style=\"margin:0;\"><a href =" + entry.getKey() + " >" + getTitle(entry.getKey()) + "</a> Rank = " + entry.getValue() + "</h3>\n"
-                        + "<cite style=\" font-size:14px; color:green; font-style: normal; \">" + entry.getKey() + "</cite>");
+            if(!res.isEmpty()){
+                for (Map.Entry<String, Double> entry : res.entrySet()) {
+                    out.println("<h3 style=\"margin:0;\"><a href =" + entry.getKey() + " >" + getTitle(entry.getKey()) + "</a> Rank = " + entry.getValue() + "</h3>\n"
+                            + "<cite style=\" font-size:14px; color:green; font-style: normal; \">" + entry.getKey() + "</cite>");
+                }
             }
-            
-            
+            else{
+                out.println("<p>Your search  - <B>"+Query+"</B> - did not match any documents.</p>");
+            }
             out.println("</div>");
             out.println("</body>");
             out.println("</html>");
