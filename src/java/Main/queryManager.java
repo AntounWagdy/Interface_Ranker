@@ -11,14 +11,25 @@ public class queryManager {
     boolean flag; //for delete query
     String sql;
     databaseManager db;
-
+    int targetDB;
+    
     public queryManager() {
         this.db = databaseManager.getInstance();
     }
-
+    private void setTarget(){
+        sql = "SELECT num FROM search_engine.working_db where DB = \"DB\";";
+        try {
+            myRes = db.select(sql);
+            myRes.next();
+            targetDB = myRes.getInt("num");
+        } catch (SQLException ex) {
+            Logger.getLogger(queryManager.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
     ResultSet selectSimilarPhrases(String Query) {
-        /*TODO: change to the name of the database*/
-        sql = "SELECT PhrasesColumn FROM Phrases where PhraseColumn like %"+Query+"%;";
+        setTarget();
+        sql = "SELECT * FROM phrases"+(((targetDB == 2) ? "2" : "") )+" where phrase like %"+Query+"%;";
 
         try {
             myRes = db.select(sql);
@@ -30,7 +41,9 @@ public class queryManager {
 
     ResultSet selectDocsHasWord(String word) {
         /*TODO : Determining which database to use*/
-        sql = "SELECT Url from search_engine.doc_words2,search_engine.document2 where docId2 = ID_doc and word = \""+word+"\";";
+        setTarget();
+
+        sql = "SELECT distinct Url from search_engine.doc_words"+(((targetDB == 2) ? "2" : "") )+",search_engine.document"+(((targetDB == 2) ? "2" : "") )+" where docId"+(((targetDB == 2) ? "2" : "") )+" = ID_doc and word = \""+word+"\";";
         try {
             myRes = db.select(sql);
         } catch (SQLException ex) {
@@ -41,7 +54,9 @@ public class queryManager {
 
     Double numberOfDocsContainingWord(String word) {
         /*TODO : Determining which database to use*/
-        sql = "SELECT count(Url) as num from search_engine.doc_words2,search_engine.document2 where docId2 = ID_doc and word = \""+word+"\";";
+        setTarget();
+
+        sql = "SELECT count(distinct Url) as num from search_engine.doc_words"+(((targetDB == 2) ? "2" : "") )+",search_engine.document"+(((targetDB == 2) ? "2" : "") )+" where docId"+(((targetDB == 2) ? "2" : "") )+" = ID_doc and word = \""+word+"\";";
         try {
             myRes = db.select(sql);
             myRes.next();
@@ -53,7 +68,9 @@ public class queryManager {
     }
     Integer getDocId(String U){
         /*TODO : Determining which database to use*/
-        sql = "SELECT docId2 from search_engine.document2 where Url =\""+U+"\";";
+        setTarget();
+
+        sql = "SELECT docId"+(((targetDB == 2) ? "2" : "") )+" from search_engine.document"+(((targetDB == 2) ? "2" : "") )+" where Url =\""+U+"\";";
         try {
             myRes = db.select(sql);
             myRes.next();
@@ -65,7 +82,9 @@ public class queryManager {
     }
     Double getNumOfOccurence(String U, String word) {
         /*TODO : Determining which database to use*/
-        sql = "SELECT count(*) as num from search_engine.doc_words2 where ID_doc = "+getDocId(U)+" and word = \""+word+"\";";
+        setTarget();
+
+        sql = "SELECT count(*) as num from search_engine.doc_words"+(((targetDB == 2) ? "2" : "") )+" where ID_doc = "+getDocId(U)+" and word = \""+word+"\";";
         try {
             myRes = db.select(sql);
             myRes.next();
@@ -78,7 +97,9 @@ public class queryManager {
 
     Double getNumOfWords(String U) {
         /*TODO : Determining which database to use*/
-        sql = "SELECT count(*) as num from search_engine.doc_words2 where ID_doc = "+getDocId(U)+";";
+        setTarget();
+
+        sql = "SELECT count(*) as num from search_engine.doc_words"+(((targetDB == 2) ? "2" : "") )+" where ID_doc = "+getDocId(U)+";";
         try {
             myRes = db.select(sql);
             myRes.next();
@@ -90,6 +111,30 @@ public class queryManager {
     }
 
     Double getPageRank(String U) {
-        return 1.0;
+        setTarget();
+        //"+(((targetDB == 2) ? "2" : "") )+"
+         sql = "SELECT page_rank from rank"+(((targetDB == 2) ? "2" : "") )+" where docId = "+getDocId(U)+";";
+        try {
+            myRes = db.select(sql);
+            myRes.next();
+            return myRes.getDouble("page_rank");
+        } catch (SQLException ex) {
+            Logger.getLogger(queryManager.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return Double.NaN;
+    }
+
+    Double getNumOfPages() {
+        setTarget();
+         sql = "SELECT count(*) as num from document"+(((targetDB == 2) ? "2" : "") )+";";
+        try {
+            myRes = db.select(sql);
+            myRes.next();
+            return myRes.getDouble("num");
+        } catch (SQLException ex) {
+            Logger.getLogger(queryManager.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return Double.NaN;
+    
     }
 }

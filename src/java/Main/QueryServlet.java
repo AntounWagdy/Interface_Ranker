@@ -14,6 +14,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeMap;
@@ -39,7 +44,9 @@ public class QueryServlet extends HttpServlet {
     }
     
     public String getTitle(String url) {
-        /*to be replaced by retrieving title from the database*/
+        return "lol";
+        /*
+        //to be replaced by retrieving title from the database
         InputStream response;
         try {
             response = new URL(url).openStream();
@@ -52,15 +59,19 @@ public class QueryServlet extends HttpServlet {
             Logger.getLogger(QueryServlet.class.getName()).log(Level.SEVERE, null, ex);
         }
         return "No title is available";
+  */
     }
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        Map<String, Double> resultPages = new TreeMap<>(Collections.reverseOrder());
+        Map<String, Double> resultPages = new HashMap<>();
         String Query = request.getParameter("QUERY").trim().toLowerCase();
         PorterStemmer PS = new PorterStemmer();
         queryManager qm = new queryManager();
         ArrayList<String> words;
+        Double _max_pages = qm.getNumOfPages() ;
+
+
         try {
             if (Query.length() > 2 && Query.charAt(0) == '\"' && Query.charAt(Query.length() - 1) == '\"') {
                 /*Phrase Search*/
@@ -83,7 +94,7 @@ public class QueryServlet extends HttpServlet {
                 for (String word : words) {
                     //For Every word
                     numberOfDocsHasWord = qm.numberOfDocsContainingWord(word);
-                    IDF = Math.log10(2 / numberOfDocsHasWord);
+                    IDF = Math.log10(_max_pages / numberOfDocsHasWord);
                     arr = getUrlsFromRS(qm.selectDocsHasWord(word));
                     for (int i = 0; i < arr.size(); i++) {
                         //For every document has this word
@@ -102,6 +113,7 @@ public class QueryServlet extends HttpServlet {
             Logger.getLogger(QueryServlet.class.getName()).log(Level.SEVERE, null, ex);
         }
 
+        resultPages = sortByValue(resultPages);
         setResult(response, resultPages, Query);
     }
 
@@ -125,7 +137,7 @@ public class QueryServlet extends HttpServlet {
             
             if(!res.isEmpty()){
                 for (Map.Entry<String, Double> entry : res.entrySet()) {
-                    out.println("<h3 style=\"margin:0;\"><a href =" + entry.getKey() + " >" + getTitle(entry.getKey()) + "</a> Rank = " + entry.getValue() + "</h3>\n"
+                    out.println("<h3 style=\"margin:0;\"><a href = \"" + entry.getKey() + "\" target=\"_blank\">" + getTitle(entry.getKey()) + "</a> Rank = " + entry.getValue() + "</h3>\n"
                             + "<cite style=\" font-size:14px; color:green; font-style: normal; \">" + entry.getKey() + "</cite>");
                 }
             }
@@ -138,6 +150,26 @@ public class QueryServlet extends HttpServlet {
         }
     }
 
+     public Map<String, Double> sortByValue( Map<String,Double> map )
+    {
+        List<Map.Entry<String,Double>> list =
+            new LinkedList<Map.Entry<String,Double>>( map.entrySet());
+        Collections.sort( list, new Comparator<Map.Entry<String,Double>>()
+        {
+            public int compare( Map.Entry<String,Double> o1, Map.Entry<String,Double> o2 )
+            {
+                return (o2.getValue()).compareTo( o1.getValue() );
+            }
+        } );
+
+        Map<String,Double> result = new LinkedHashMap<String,Double>();
+        for (Map.Entry<String,Double> entry : list)
+        {
+            result.put( entry.getKey(), entry.getValue() );
+        }
+        return result;
+    }
+    
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
     /**
      * Handles the HTTP <code>GET</code> method.
