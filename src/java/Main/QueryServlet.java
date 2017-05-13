@@ -1,15 +1,7 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package Main;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintWriter;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -20,8 +12,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
-import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.ServletException;
@@ -31,93 +21,83 @@ import javax.servlet.http.HttpServletResponse;
 
 public class QueryServlet extends HttpServlet {
 
-    private ArrayList<String> getUrlsFromRS(ResultSet selectDocsHasWord) {
-        ArrayList<String> temp = new ArrayList<>();
+    queryManager qm = null;
+
+    private ArrayList<Double> getUrlsFromRS(ResultSet selectDocsHasWord, String Column) {
+        ArrayList<Double> temp = new ArrayList<>();
         try {
-            while(selectDocsHasWord.next()){
-                temp.add(selectDocsHasWord.getString("Url"));
+            while (selectDocsHasWord.next()) {
+                temp.add(selectDocsHasWord.getDouble(Column));
             }
         } catch (SQLException ex) {
             Logger.getLogger(QueryServlet.class.getName()).log(Level.SEVERE, null, ex);
         }
         return temp;
     }
-    
-    public String getTitle(String url) {
-        return "lol";
-        /*
-        //to be replaced by retrieving title from the database
-        InputStream response;
-        try {
-            response = new URL(url).openStream();
-            Scanner scanner = new Scanner(response);
-            String responseBody = scanner.useDelimiter("\\A").next();
-            return (responseBody.substring(responseBody.indexOf("<title>") + 7, responseBody.indexOf("</title>")));
-        } catch (MalformedURLException ex) {
-            Logger.getLogger(QueryServlet.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(QueryServlet.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return "No title is available";
-  */
-    }
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        Map<String, Double> resultPages = new HashMap<>();
+        if (qm == null) {
+            qm = new queryManager();
+        }
+        Map<Double, Double> resultPages = new HashMap<>(); // key : id of URL ,value : Rank
+
         String Query = request.getParameter("QUERY").trim().toLowerCase();
         PorterStemmer PS = new PorterStemmer();
-        queryManager qm = new queryManager();
         ArrayList<String> words;
-        Double _max_pages = qm.getNumOfPages() ;
+        Double _max_pages = qm.getNumOfPages();
 
+        ArrayList<Double> arr;
+        Double numberOfDocsHasWord;
+        Double IDF;
+        Double U;
+        Double numberOfOcurrence;
+        Double numberOfWords;
+        Double TF;
 
-        try {
-            if (Query.length() > 2 && Query.charAt(0) == '\"' && Query.charAt(Query.length() - 1) == '\"') {
-                /*Phrase Search*/
-                Query = Query.substring(1, Query.length() - 1);
-                ResultSet RS = qm.selectSimilarPhrases(Query);
-                while (RS.next()) {
-                    //    resultPages.put(RS.getString("Url"), 0.0);
-                }
-            } else {
-                /*Word Search*/
-                words = PS.StemText(Query);
-                ArrayList<String> arr;
-                Double numberOfDocsHasWord;
-                Double IDF;
-                String U;
-                Double numberOfOcurrence;
-                Double numberOfWords;
-                Double TF;
+        if (Query.length() > 2 && Query.charAt(0) == '\"' && Query.charAt(Query.length() - 1) == '\"') {
+            /*Phrase Search*/
+            Query = Query.substring(1, Query.length() - 1);
+            numberOfDocsHasWord = qm.selectDocsHasPhrases(Query);
+            IDF = Math.log10(_max_pages / numberOfDocsHasWord);
+            arr = getUrlsFromRS(qm.selectSimilarPhrases(Query), "webID");
 
-                for (String word : words) {
-                    //For Every word
-                    numberOfDocsHasWord = qm.numberOfDocsContainingWord(word);
-                    IDF = Math.log10(_max_pages / numberOfDocsHasWord);
-                    arr = getUrlsFromRS(qm.selectDocsHasWord(word));
-                    for (int i = 0; i < arr.size(); i++) {
-                        //For every document has this word
-                        U = arr.get(i);
-                        numberOfOcurrence = qm.getNumOfOccurence(U, word);
-                        numberOfWords = qm.getNumOfWords(U);
-                        TF = numberOfOcurrence / numberOfWords;
-                        if(resultPages.get(U) == null)
-                            resultPages.put(U,(IDF * TF * qm.getPageRank(U)));
-                        else
-                            resultPages.put(U, resultPages.get(U) +(IDF * TF * qm.getPageRank(U)));
+            for (double docId : arr) {
+                /*for each Document calculate tf*/
+                numberOfOcurrence = qm.getNumOfPhraseOccurence(docId, Query);
+                numberOfWords = qm.getNumOfPhrases(docId);
+                TF = numberOfOcurrence / numberOfWords;
+                resultPages.put(docId, (IDF * TF * qm.getPageRank(docId)));
+            }
+            Query = "\"" + Query + "\"";
+        } else {
+            /*Word Search*/
+            words = PS.StemText(Query);
+            for (String word : words) {
+                //For Every word
+                numberOfDocsHasWord = qm.numberOfDocsContainingWord(word);
+                IDF = Math.log10(_max_pages / numberOfDocsHasWord);
+                arr = getUrlsFromRS(qm.selectDocsHasWord(word), "ID_doc");
+                for (int i = 0; i < arr.size(); i++) {
+                    //For every document has this word
+                    U = arr.get(i);
+                    numberOfOcurrence = qm.getNumOfOccurence(U, word);
+                    numberOfWords = qm.getNumOfWords(U);
+                    TF = numberOfOcurrence / numberOfWords;
+                    if (resultPages.get(U) == null) {
+                        resultPages.put(U, (IDF * TF * qm.getPageRank(U)));
+                    } else {
+                        resultPages.put(U, resultPages.get(U) + (IDF * TF * qm.getPageRank(U)));
                     }
                 }
             }
-        } catch (SQLException ex) {
-            Logger.getLogger(QueryServlet.class.getName()).log(Level.SEVERE, null, ex);
         }
 
         resultPages = sortByValue(resultPages);
         setResult(response, resultPages, Query);
     }
 
-    private void setResult(HttpServletResponse response, Map<String, Double> res, String Query) throws IOException {
+    private void setResult(HttpServletResponse response, Map<Double, Double> res, String Query) throws IOException {
         response.setContentType("text/html;charset=UTF-8");
         try (PrintWriter out = response.getWriter()) {
             out.println("<!DOCTYPE html>");
@@ -134,15 +114,19 @@ public class QueryServlet extends HttpServlet {
                     + "<input autofocus autocomplete=\"off\" value = \"" + Query + "\" type=\"text\" name=\"QUERY\" size=\"35\"/>\n"
                     + "<input type=\"submit\" value=\"Search!\" style=\"font-size : 15px; font-weight: bold;\"/>\n"
                     + "</form>");
-            
-            if(!res.isEmpty()){
-                for (Map.Entry<String, Double> entry : res.entrySet()) {
-                    out.println("<h3 style=\"margin:0;\"><a href = \"" + entry.getKey() + "\" target=\"_blank\">" + getTitle(entry.getKey()) + "</a> Rank = " + entry.getValue() + "</h3>\n"
-                            + "<cite style=\" font-size:14px; color:green; font-style: normal; \">" + entry.getKey() + "</cite>");
+
+            if (!res.isEmpty()) {
+                for (Map.Entry<Double, Double> entry : res.entrySet()) {
+                    String Url = qm.getURL(entry.getKey());
+                    out.println("<h3 style=\"margin:0;\"><a href = \"" + Url + "\" target=\"_blank\">" + qm.getTitle(entry.getKey()) + "</a> Rank = " + entry.getValue() + "</h3>\n"
+                            + "<cite style=\" font-size:14px; color:green; font-style: normal; \">" + Url + "</cite>");
                 }
-            }
-            else{
-                out.println("<p>Your search  - <B>"+Query+"</B> - did not match any documents.</p>");
+            } else {
+                if (Query.length() > 2 && Query.charAt(0) == '\"' && Query.charAt(Query.length() - 1) == '\"') {
+                    out.println("<p>Your search  - <B>" + Query + "</B> - did not match any documents.Try use it without quotes <a href = \"http://localhost:8080/Phase2/QueryServlet?QUERY=" + Query.substring(1, Query.length() - 1) + "\">here</a> </p>");
+                } else {
+                    out.println("<p>Your search  - <B>" + Query + "</B> - did not match any documents.</p>");
+                }
             }
             out.println("</div>");
             out.println("</body>");
@@ -150,26 +134,22 @@ public class QueryServlet extends HttpServlet {
         }
     }
 
-     public Map<String, Double> sortByValue( Map<String,Double> map )
-    {
-        List<Map.Entry<String,Double>> list =
-            new LinkedList<Map.Entry<String,Double>>( map.entrySet());
-        Collections.sort( list, new Comparator<Map.Entry<String,Double>>()
-        {
-            public int compare( Map.Entry<String,Double> o1, Map.Entry<String,Double> o2 )
-            {
-                return (o2.getValue()).compareTo( o1.getValue() );
+    public Map<Double, Double> sortByValue(Map<Double, Double> map) {
+        List<Map.Entry<Double, Double>> list
+                = new LinkedList<Map.Entry<Double, Double>>(map.entrySet());
+        Collections.sort(list, new Comparator<Map.Entry<Double, Double>>() {
+            public int compare(Map.Entry<Double, Double> o1, Map.Entry<Double, Double> o2) {
+                return (o2.getValue()).compareTo(o1.getValue());
             }
-        } );
+        });
 
-        Map<String,Double> result = new LinkedHashMap<String,Double>();
-        for (Map.Entry<String,Double> entry : list)
-        {
-            result.put( entry.getKey(), entry.getValue() );
+        Map<Double, Double> result = new LinkedHashMap<Double, Double>();
+        for (Map.Entry<Double, Double> entry : list) {
+            result.put(entry.getKey(), entry.getValue());
         }
         return result;
     }
-    
+
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
     /**
      * Handles the HTTP <code>GET</code> method.
@@ -208,6 +188,5 @@ public class QueryServlet extends HttpServlet {
     public String getServletInfo() {
         return "Short description";
     }// </editor-fold>
-
 
 }

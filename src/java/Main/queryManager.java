@@ -29,8 +29,7 @@ public class queryManager {
     
     ResultSet selectSimilarPhrases(String Query) {
         setTarget();
-        sql = "SELECT * FROM phrases"+(((targetDB == 2) ? "2" : "") )+" where phrase like %"+Query+"%;";
-
+        sql = "SELECT webID FROM phrases"+(((targetDB == 2) ? "2" : "") )+" where phrase like \"%"+Query+"%\";";
         try {
             myRes = db.select(sql);
         } catch (SQLException ex) {
@@ -40,10 +39,9 @@ public class queryManager {
     }
 
     ResultSet selectDocsHasWord(String word) {
-        /*TODO : Determining which database to use*/
         setTarget();
 
-        sql = "SELECT distinct Url from search_engine.doc_words"+(((targetDB == 2) ? "2" : "") )+",search_engine.document"+(((targetDB == 2) ? "2" : "") )+" where docId"+(((targetDB == 2) ? "2" : "") )+" = ID_doc and word = \""+word+"\";";
+        sql = "SELECT distinct ID_doc from search_engine.doc_words"+(((targetDB == 2) ? "2" : "") )+" where word = \""+word+"\";";
         try {
             myRes = db.select(sql);
         } catch (SQLException ex) {
@@ -56,7 +54,7 @@ public class queryManager {
         /*TODO : Determining which database to use*/
         setTarget();
 
-        sql = "SELECT count(distinct Url) as num from search_engine.doc_words"+(((targetDB == 2) ? "2" : "") )+",search_engine.document"+(((targetDB == 2) ? "2" : "") )+" where docId"+(((targetDB == 2) ? "2" : "") )+" = ID_doc and word = \""+word+"\";";
+        sql = "SELECT count(distinct ID_doc) as num from search_engine.doc_words"+(((targetDB == 2) ? "2" : "") )+" where word = \""+word+"\";";
         try {
             myRes = db.select(sql);
             myRes.next();
@@ -66,25 +64,23 @@ public class queryManager {
         }
         return Double.NaN;
     }
-    Integer getDocId(String U){
-        /*TODO : Determining which database to use*/
+    Double getDocId(String U){
         setTarget();
-
         sql = "SELECT docId"+(((targetDB == 2) ? "2" : "") )+" from search_engine.document"+(((targetDB == 2) ? "2" : "") )+" where Url =\""+U+"\";";
         try {
             myRes = db.select(sql);
             myRes.next();
-            return myRes.getInt("docId2");
+            return myRes.getDouble("docId"+(((targetDB == 2) ? "2" : "")));
         } catch (SQLException ex) {
             Logger.getLogger(queryManager.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return -1;
+        return -1.0;
     }
-    Double getNumOfOccurence(String U, String word) {
+    Double getNumOfOccurence(Double U, String word) {
         /*TODO : Determining which database to use*/
         setTarget();
 
-        sql = "SELECT count(*) as num from search_engine.doc_words"+(((targetDB == 2) ? "2" : "") )+" where ID_doc = "+getDocId(U)+" and word = \""+word+"\";";
+        sql = "SELECT count(*) as num from search_engine.doc_words"+(((targetDB == 2) ? "2" : "") )+" where ID_doc = "+U+" and word = \""+word+"\";";
         try {
             myRes = db.select(sql);
             myRes.next();
@@ -95,11 +91,11 @@ public class queryManager {
         return Double.NaN;
     }
 
-    Double getNumOfWords(String U) {
+    Double getNumOfWords(Double U) {
         /*TODO : Determining which database to use*/
         setTarget();
 
-        sql = "SELECT count(*) as num from search_engine.doc_words"+(((targetDB == 2) ? "2" : "") )+" where ID_doc = "+getDocId(U)+";";
+        sql = "SELECT count(*) as num from search_engine.doc_words"+(((targetDB == 2) ? "2" : "") )+" where ID_doc = "+U+";";
         try {
             myRes = db.select(sql);
             myRes.next();
@@ -110,10 +106,9 @@ public class queryManager {
         return Double.NaN;
     }
 
-    Double getPageRank(String U) {
+    Double getPageRank(Double U) {
         setTarget();
-        //"+(((targetDB == 2) ? "2" : "") )+"
-         sql = "SELECT page_rank from rank"+(((targetDB == 2) ? "2" : "") )+" where docId = "+getDocId(U)+";";
+         sql = "SELECT page_rank from rank"+(((targetDB == 2) ? "2" : "") )+" where docId = "+U+";";
         try {
             myRes = db.select(sql);
             myRes.next();
@@ -136,5 +131,71 @@ public class queryManager {
         }
         return Double.NaN;
     
+    }
+
+    String getTitle(Double url) {
+       setTarget();
+         sql = "SELECT title from titles"+(((targetDB == 2) ? "2" : "") )+" where doc_id = "+url+";";
+        try {
+            myRes = db.select(sql);
+            myRes.next();
+            return myRes.getString("title");
+        } catch (SQLException ex) {
+            Logger.getLogger(queryManager.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
+    
+    }
+
+    String getURL(Double key) {
+        setTarget();
+        sql = "SELECT Url from search_engine.document"+(((targetDB == 2) ? "2" : "") )+" where docId"+(((targetDB == 2) ? "2" : ""))+" = "+key+";";
+        try {
+            myRes = db.select(sql);
+            myRes.next();
+            return myRes.getString("Url");
+        } catch (SQLException ex) {
+            Logger.getLogger(queryManager.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
+    }
+
+    Double selectDocsHasPhrases(String Query) {
+        setTarget();
+        sql = "SELECT count(*) as num FROM phrases"+(((targetDB == 2) ? "2" : "") )+" where phrase like \"%"+Query+"%\";";
+        try {
+            myRes = db.select(sql);
+            myRes.next();
+            return myRes.getDouble("num");
+        } catch (SQLException ex) {
+            Logger.getLogger(queryManager.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return Double.NaN;
+    }
+
+    Double getNumOfPhraseOccurence(double aDouble, String Query) {
+        setTarget();
+        sql = "SELECT count(*) as num FROM phrases"+(((targetDB == 2) ? "2" : "") )+" where phrase like \"%"+Query+"%\" and webID = "+aDouble+";";
+        try {
+            myRes = db.select(sql);
+            myRes.next();
+            return myRes.getDouble("num");
+        } catch (SQLException ex) {
+            Logger.getLogger(queryManager.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return Double.NaN;
+    }
+
+    Double getNumOfPhrases(double aDouble) {
+        setTarget();
+        sql = "SELECT count(*) as num FROM phrases"+(((targetDB == 2) ? "2" : "") )+" where webID = "+aDouble+";";
+        try {
+            myRes = db.select(sql);
+            myRes.next();
+            return myRes.getDouble("num");
+        } catch (SQLException ex) {
+            Logger.getLogger(queryManager.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return Double.NaN;
     }
 }
