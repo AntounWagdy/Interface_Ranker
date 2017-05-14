@@ -108,13 +108,18 @@ public class QueryServlet extends HttpServlet {
             out.println("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
             out.println("</head>");
             out.println("<body>");
+
+            String Que = ""+Query;
+            if (Query.length() > 2 && Query.charAt(0) == '\"' && Query.charAt(Query.length() - 1) == '\"') {
+               Que = "&quot;"+Query.substring(1, Query.length() - 1)+"&quot;";
+            }
+            
             out.println("<h1 align=\"center\" >Search Results</h1>\n"
                     + "<div style=\"position: absolute; left:50px;padding: 10px;\">\n"
                     + "<form action=\"QueryServlet\" method=\"GET\" id=\"q\">\n"
-                    + "<input autofocus autocomplete=\"off\" value = \"" + Query + "\" type=\"text\" name=\"QUERY\" size=\"35\"/>\n"
+                    + "<input autofocus autocomplete=\"off\" value = \"" + Que + "\" type=\"text\" name=\"QUERY\" size=\"35\"/>\n"
                     + "<input type=\"submit\" value=\"Search!\" style=\"font-size : 15px; font-weight: bold;\"/>\n"
                     + "</form>");
-
             if (!res.isEmpty()) {
                 for (Map.Entry<Double, Double> entry : res.entrySet()) {
                     String Url = qm.getURL(entry.getKey());
